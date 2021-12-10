@@ -51,14 +51,26 @@ namespace ImageEffects
 
             var result = new double[width, height];
 
-            for (int x = 0; x < width; x++)
-            {
-                for (int y = 0; y < height; y++)
+            var tasks = Enumerable.Range(0, height - 1)
+                .Select(y => Task.Factory.StartNew(() =>
                 {
-                    result[x, y] = GetPixelEnergy(pixels, x, y);
-                }
-            }
+                    var res = new double[width];
+                    for (int x = 0; x < width; x++)
+                    {
+                        res[x] = GetPixelEnergy(pixels, x, y);
+                    }
 
+                    return res;
+                }).ContinueWith(task =>
+                {
+                    var r = task.Result;
+                    for (int x = 0; x < width; x++)
+                    {
+                        result[x, y] = r[x];
+                    }
+                }));
+
+            Task.WaitAll(tasks.ToArray());
             return result;
         }
 
@@ -159,6 +171,7 @@ namespace ImageEffects
             _queue = new SimplePriorityQueue<Pixel>();
             _visited.Clear();
             _processed.Clear();
+            
             for (var y = 0; y < image.GetLength(1); y++)
             {
                 var newPixel = new Pixel(0, y, intensityMat[0, y], null);
