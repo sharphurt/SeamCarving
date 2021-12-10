@@ -1,0 +1,11 @@
+C:\Users\sharphurt\RiderProjects\SeamCarving\ImageEffects\obj\Debug\ImageEffects.csprojAssemblyReference.cache
+C:\Users\sharphurt\RiderProjects\SeamCarving\ImageEffects\obj\Debug\ImageEffects.csproj.CoreCompileInputs.cache
+C:\Users\sharphurt\RiderProjects\SeamCarving\ImageEffects\bin\Debug\ImageEffects.dll
+C:\Users\sharphurt\RiderProjects\SeamCarving\ImageEffects\bin\Debug\ImageEffects.pdb
+C:\Users\sharphurt\RiderProjects\SeamCarving\ImageEffects\obj\Debug\ImageEffects.dll
+C:\Users\sharphurt\RiderProjects\SeamCarving\ImageEffects\obj\Debug\ImageEffects.pdb
+C:\Users\sharphurt\RiderProjects\SeamCarving\ImageEffects\bin\Debug\PriorityQueue.dll
+C:\Users\sharphurt\RiderProjects\SeamCarving\ImageEffects\bin\Debug\PriorityQueue.pdb
+C:\Users\sharphurt\RiderProjects\SeamCarving\ImageEffects\bin\Debug\PriorityQueue.xml
+C:\Users\sharphurt\RiderProjects\SeamCarving\ImageEffects\obj\Debug\ImageEffects.csproj.CopyComplete
+C:\Users\sharphurt\RiderProjects\SeamCarving\ImageEffects\bin\Debug\RapidPriorityQueue.dll
