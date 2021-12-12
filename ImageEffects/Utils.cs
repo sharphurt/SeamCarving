@@ -73,5 +73,16 @@ namespace ImageEffects
         {
             return (((v - min) * (newMax - newMin)) / (max - min)) + newMin;
         }
+
+        public static T[][] Copy<T>(this T[][] arr)
+        {
+            var newArr = new T[arr.Length][];
+            for (var i = 0; i < newArr.Length; i++)
+            {
+                newArr[i] = arr[i].Clone() as T[];
+            }
+
+            return newArr;
+        }
     }
 }

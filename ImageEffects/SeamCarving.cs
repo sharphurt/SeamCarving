@@ -32,89 +32,55 @@ namespace ImageEffects
             }
         };
 
-        /*
-        public static double GetPixelEnergy(Pixel[,] pixels, int x, int y)
-        {
-            var width = pixels.GetLength(0);
-            var height = pixels.GetLength(1);
-
-            var result = 0;
-            
-            for (int k = 0; k < 3; k++)
-            {
-                int sum = 0, count = 0;
-
-                if (y != height - 1)
-                {
-                    count++;
-                    sum += Math.Abs(indexToColorComponent(pixels[x, y].Color, k) -
-                                    indexToColorComponent(pixels[x, y + 1].Color, k));
-                }
-
-                if (x != width - 1)
-                {
-                    count++;
-                    sum += Math.Abs(indexToColorComponent(pixels[x, y].Color, k) -
-                                    indexToColorComponent(pixels[x + 1, y].Color, k));
-                }
-
-                if (count != 0)
-                    result += sum / count;
-            }
-
-            return result;
-        }
-        */
-
         public static double GetPixelEnergy(Pixel[,] pixels, int x, int y)
         {
             var xm = x;
             var ym = y;
             if (xm == 0)
                 xm++;
-    
+
             if (xm == pixels.GetLength(0) - 1)
                 xm--;
-    
+
             var dx = Math.Pow(((pixels[xm + 1, y].R - pixels[xm - 1, y].R)), 2.0) +
                      Math.Pow(((pixels[xm + 1, y].G - pixels[xm - 1, y].G)), 2.0) +
                      Math.Pow(((pixels[xm + 1, y].B - pixels[xm - 1, y].B)), 2.0);
-    
+
             if (y == 0)
                 ym++;
-    
+
             if (y == pixels.GetLength(1) - 1)
                 ym--;
-    
+
             var dy = Math.Pow(((pixels[x, ym + 1].R - pixels[x, ym - 1].R)), 2.0) +
                      Math.Pow(((pixels[x, ym + 1].G - pixels[x, ym - 1].G)), 2.0) +
                      Math.Pow(((pixels[x, ym + 1].B - pixels[x, ym - 1].B)), 2.0);
-    
+
             return Math.Sqrt(dx + dy);
         }
 
-        public static double[,] MakeIntensityMatrix(Pixel[,] pixels)
+        public static double[][] MakeEnergyMap(Pixel[,] pixels)
         {
             var width = pixels.GetLength(0);
             var height = pixels.GetLength(1);
-            var result = new double[width, height];
+            var result = new double[width][];
 
-            var tasks = Enumerable.Range(0, height)
-                .Select(y => Task.Factory.StartNew(() =>
+            var tasks = Enumerable.Range(0, width)
+                .Select(x => Task.Factory.StartNew(() =>
                 {
-                    var res = new double[width];
-                    for (int x = 0; x < width; x++)
+                    var res = new double[height];
+                    for (int y = 0; y < height; y++)
                     {
-                        res[x] = GetPixelEnergy(pixels, x, y);
+                        res[y] = GetPixelEnergy(pixels, x, y);
                     }
 
                     return res;
                 }).ContinueWith(task =>
                 {
-                    var r = task.Result;
-                    for (int x = 0; x < width; x++)
+                    lock (result)
                     {
-                        result[x, y] = r[x];
+                        var r = task.Result;
+                        result[x] = r;
                     }
                 }));
 
@@ -122,222 +88,147 @@ namespace ImageEffects
             return result;
         }
 
-        public static double[,] MakeSumMatrix(double[,] energyMatrix)
+        public static (int x, int y)[][] MakeVerticalIndexMap(double[][] energyMap)
         {
-            var width = energyMatrix.GetLength(0);
-            var height = energyMatrix.GetLength(1);
+            var width = energyMap.Length;
+            var height = energyMap[0].Length;
 
-            var result = new double[width, height];
-            for (var i = 0; i < width; i++) result[i, 0] = energyMatrix[i, 0];
+            var result = new (int x, int y)[width][];
 
-            for (var x = 0; x < width; x++)
-            for (int y = 1; y < height; y++)
+            var tasks = Enumerable.Range(0, width)
+                .Select(x => Task.Factory.StartNew(() =>
+                {
+                    var col = new (int x, int y)[height];
+                    for (var y = 0; y < height - 1; y++)
+                    {
+                        col[y] = GetMinValueBottom(energyMap, x, y).position;
+                    }
+
+                    col[height - 1] = (int.MaxValue, int.MaxValue);
+
+                    return col;
+                }).ContinueWith(task =>
+                {
+                    lock (result) result[x] = task.Result;
+                }));
+
+            Task.WaitAll(tasks.ToArray());
+            return result;
+        }
+
+        public static (int x, int y)[][] MakeHorizontalIndexMap(double[][] energyMap)
+        {
+            var width = energyMap.Length;
+            var height = energyMap[0].Length;
+
+            var result = new (int x, int y)[width][];
+
+            var tasks = Enumerable.Range(0, height)
+                .Select(y => Task.Factory.StartNew(() =>
+                {
+                    var col = new (int x, int y)[height];
+                    for (var x = 0; x < width - 1; y++)
+                    {
+                        col[y] = GetMinValueBottom(energyMap, x, y).position;
+                    }
+
+                    col[height - 1] = (int.MaxValue, int.MaxValue);
+
+                    return col;
+                }).ContinueWith(task =>
+                {
+                    lock (result) result[y] = task.Result;
+                }));
+
+            Task.WaitAll(tasks.ToArray());
+            return result;
+        }
+        
+        public static double[] CalculateSeams(double[][] energyMap, (int x, int y)[][] indexMap)
+        {
+            var width = energyMap.Length;
+            var height = energyMap[0].Length;
+
+            var sumMap = energyMap.Copy();
+            var offsetMap = indexMap.Copy();
+
+            // Round down to nearest even & divide by 2
+            var blocks = (height & ~1) / 2;
+
+            for (var iteration = 1; iteration < height / 2; iteration *= 2)
             {
-                var min = GetMinValueAbove(energyMatrix, x, y);
-                result[x, y] += energyMatrix[x, y] + min.value;
+                var blockSize = height / blocks;
+
+                var tasks = Enumerable.Range(0, blocks)
+                    .Select(block => Task.Factory.StartNew(() =>
+                    {
+                        var y = block * blockSize;
+                        for (var x = 0; x < width; x++)
+                        {
+                            var nextPixelPosition = offsetMap[x][y];
+
+                            lock (offsetMap) offsetMap[x][y] = offsetMap[nextPixelPosition.x][nextPixelPosition.y];
+                            lock (sumMap) sumMap[x][y] += sumMap[nextPixelPosition.x][nextPixelPosition.y];
+                        }
+                    }));
+
+                Task.WaitAll(tasks.ToArray());
+                blocks /= 2;
             }
+
+            var result = new double[width];
+            for (var i = 0; i < width; i++) result[i] = sumMap[i][0];
 
             return result;
         }
 
-
-        public static List<(int x, int y)> FindShrikedPixelsVertically(double[,] sumMatrix)
+        public static List<(int x, int y)> GetBestSeam(double[] sums, (int x, int y)[][] indexMap)
         {
-            var result = new List<(int x, int y)>();
-            var width = sumMatrix.GetLength(0);
-            var height = sumMatrix.GetLength(1);
-            var minFirst = double.MaxValue;
-
-            var minFirstPosition = (x: 0, y: 0);
-            for (var i = 0;
-                i < width;
-                i++)
+            var bestStartPosition = (x: 0, y: 0);
+            var bestStartValue = double.MaxValue;
+            for (var i = 0; i < sums.Length; i++)
             {
-                if (!(sumMatrix[i, height - 1] < minFirst)) continue;
-                minFirst = sumMatrix[i, height - 1];
-                minFirstPosition = (i, height - 1);
+                if (!(sums[i] < bestStartValue)) continue;
+                bestStartPosition = (i, 0);
+                bestStartValue = sums[i];
             }
 
-            result.Add(minFirstPosition);
+            var result = new List<(int, int)>();
 
-            var lastFindedPosition = minFirstPosition;
-            for (var y = height - 1; y > 0; y--)
+            var nextPosition = bestStartPosition;
+            while (nextPosition.y != int.MaxValue)
             {
-                var minAbove = GetMinValueAbove(sumMatrix, lastFindedPosition.x, y);
-                lastFindedPosition = minAbove.position;
-                result.Add(lastFindedPosition);
+                result.Add(nextPosition);
+                nextPosition = indexMap[nextPosition.x][nextPosition.y];
             }
 
-            return result;
+            return result.GetRange(0, result.Count - 1);
         }
 
-        private static ((int x, int y) position, double value) GetMinValueAbove(double[,] sumMatrix, int x, int y)
+        private static ((int x, int y) position, double value) GetMinValueBottom(double[][] sumMatrix, int x, int y)
         {
             var min = Double.MaxValue;
 
             var minPosition = (x: 0, y: 0);
             for (var xOffset = -1; xOffset <= 1; xOffset++)
             {
-                if (x + xOffset < 0 || x + xOffset >= sumMatrix.GetLength(0))
+                if (x + xOffset < 0 || x + xOffset >= sumMatrix.Length)
                     continue;
 
-                if (sumMatrix[x + xOffset, y - 1] < min)
+                if (sumMatrix[x + xOffset][y + 1] < min)
                 {
-                    min = sumMatrix[x + xOffset, y - 1];
-                    minPosition = (x + xOffset, y - 1);
+                    min = sumMatrix[x + xOffset][y + 1];
+                    minPosition = (x + xOffset, y + 1);
                 }
             }
 
             return (minPosition, min);
         }
-
-
-        public static Pixel[,] GrayScaleEnergyRepresentation(double[,] intensityMatrix)
-        {
-            var width = intensityMatrix.GetLength(0);
-            var height = intensityMatrix.GetLength(1);
-            var result = new Pixel[width, height];
-
-            var maxEn = intensityMatrix.Cast<double>().Max();
-            for (var x = 0;
-                x < width;
-                x++)
-            for (var y = 0;
-                y < height;
-                y++)
-            {
-                var k = (int) (255.0 * intensityMatrix[x, y] / maxEn);
-                result[x, y] = new Pixel(Color.FromArgb(k, k, k));
-            }
-
-            return result;
-        }
-
-
-        private static void CheckPixelForMarkSeam(Pixel parent, int x, int y, double[,] intensityMatrix)
-        {
-            if (!_processed.ContainsKey((x, y)))
-            {
-                if (_visited.ContainsKey((x, y)))
-                {
-                    var change = _visited[(x, y)];
-                    if (parent.IntensitySum + change.Intensity < change.IntensitySum)
-                    {
-                        _queue.Remove(change);
-                        change.IntensitySum = parent.IntensitySum + change.Intensity;
-                        change.Parent = parent;
-                        _queue.Enqueue(change, (float) change.IntensitySum);
-                    }
-                }
-                else
-                {
-                    var newPixel = new Pixel(x, y, intensityMatrix[x, y], parent);
-                    newPixel.IntensitySum = parent.IntensitySum + newPixel.Intensity;
-                    _visited.Add((x, y), newPixel);
-                    _queue.Enqueue(newPixel, (float) newPixel.IntensitySum);
-                }
-            }
-        }
+        
 
         public static Pixel[,] MarkSeam(Pixel[,] image, List<(int x, int y)> seamPixels)
         {
             foreach (var pixel in seamPixels) image[pixel.x, pixel.y].Marked = true;
-            return image;
-        }
-
-        /*
-        public static Pixel[,] MarkSeamVertical(Pixel[,] image, double[,] intensityMat)
-        {
-            _queue = new SimplePriorityQueue<Pixel>();
-            _visited.Clear();
-            _processed.Clear();
-            for (var x = 0; x < image.GetLength(0); x++)
-            {
-                var newPixel = new Pixel(x, 0, intensityMat[x, 0], null);
-                newPixel.IntensitySum = newPixel.Intensity;
-                _queue.Enqueue(newPixel, (int) newPixel.IntensitySum);
-                _visited.Add((newPixel.X, newPixel.Y), newPixel);
-            }
-    
-            var tmp = new Pixel(0, 0, 0.00001, null);
-    
-            while (true)
-            {
-                if (_queue.Count == 0)
-                    break;
-    
-                tmp = _queue.Dequeue();
-    
-                _processed[(tmp.X, tmp.Y)] = tmp;
-                _visited.Remove((tmp.X, tmp.Y));
-                //  image.setRGB(tmp.x,tmp.y,Color.BLACK.rgb) //za test
-    
-                if (tmp.Y == image.GetLength(1) - 1)
-                    break;
-    
-                if (tmp.X > 0)
-                    CheckPixelForMarkSeam(tmp, tmp.X - 1, tmp.Y + 1, intensityMat);
-    
-                CheckPixelForMarkSeam(tmp, tmp.X, tmp.Y + 1, intensityMat);
-    
-                if (tmp.X < image.GetLength(0) - 1)
-                    CheckPixelForMarkSeam(tmp, tmp.X + 1, tmp.Y + 1, intensityMat);
-            }
-    
-            while (tmp != null)
-            {
-                image[tmp.X, tmp.Y].Marked = true;
-                tmp = tmp.Parent;
-            }
-    
-            return image;
-        }*/
-
-        public static Pixel[,] MarkSeamHorizontally(Pixel[,] image, double[,] intensityMat)
-        {
-            _queue = new SimplePriorityQueue<Pixel>();
-            _visited.Clear();
-            _processed.Clear();
-            for (var y = 0;
-                y < image.GetLength(1);
-                y++)
-            {
-                var newPixel = new Pixel(0, y, intensityMat[0, y], null);
-                newPixel.IntensitySum = newPixel.Intensity;
-                _queue.Enqueue(newPixel, (int) newPixel.IntensitySum);
-                _visited.Add((newPixel.X, newPixel.Y), newPixel);
-            }
-
-            var tmp = new Pixel(0, 0, 0.00001, null);
-            while (true)
-            {
-                if (_queue.Count == 0)
-                    break;
-
-                tmp = _queue.Dequeue();
-
-                _processed[(tmp.X, tmp.Y)] = tmp;
-                _visited.Remove((tmp.X, tmp.Y));
-                //  image.setRGB(tmp.x,tmp.y,Color.BLACK.rgb) //za test
-
-                if (tmp.X == image.GetLength(0) - 1)
-                    break;
-
-                if (tmp.Y > 0)
-                    CheckPixelForMarkSeam(tmp, tmp.X + 1, tmp.Y - 1, intensityMat);
-
-                CheckPixelForMarkSeam(tmp, tmp.X + 1, tmp.Y, intensityMat);
-
-                if (tmp.Y < image.GetLength(1) - 1)
-                    CheckPixelForMarkSeam(tmp, tmp.X + 1, tmp.Y + 1, intensityMat);
-            }
-
-            while (tmp != null)
-            {
-                image[tmp.X, tmp.Y].Marked = true;
-                tmp = tmp.Parent;
-            }
-
             return image;
         }
 
@@ -359,34 +250,6 @@ namespace ImageEffects
             }
 
             image = image.Subarray(0, 0, --widht, height);
-            return image;
-        }
-
-        public static Pixel[,] RemoveSeamsHorizontally(Pixel[,] image)
-        {
-            var widht = image.GetLength(0);
-
-            var height = image.GetLength(1);
-            for (var i = 0;
-                i < widht;
-                i++)
-            {
-                var j = 0;
-                while (j < height - 1 && !image[i, j].Marked)
-                {
-                    j++;
-                }
-
-                image[i, j].Marked = false;
-
-                while (j < height - 1)
-                {
-                    image[i, j].Color = image[i, j + 1].Color;
-                    j++;
-                }
-            }
-
-            image = image.Subarray(0, 0, widht, --height);
             return image;
         }
     }

@@ -20,3 +20,4 @@ C:\Users\sharphurt\RiderProjects\SeamCarving\SeamCarving\bin\Debug\Assets\shs.jp
 C:\Users\sharphurt\RiderProjects\SeamCarving\SeamCarving\bin\Debug\Assets\rickroll.jfif
 C:\Users\sharphurt\RiderProjects\SeamCarving\SeamCarving\bin\Debug\Assets\vladek.jpg
 C:\Users\sharphurt\RiderProjects\SeamCarving\SeamCarving\bin\Debug\Assets\hui.jpg
+C:\Users\sharphurt\RiderProjects\SeamCarving\SeamCarving\bin\Debug\Assets\test.jpg

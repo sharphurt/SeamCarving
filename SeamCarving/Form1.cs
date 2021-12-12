@@ -21,31 +21,13 @@ namespace SeamCarving
 
         public Form1()
         {
-            _startImage = new Bitmap(Image.FromFile("Assets/hui.jpg"));
+            _startImage = new Bitmap(Image.FromFile("Assets/vladek.jpg"));
             _layoutPanel = new TableLayoutPanel {Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 2};
             _layoutPanel.Layout += (sender, args) => ClientSize = new Size(_layoutPanel.Width, _layoutPanel.Height);
 
             Controls.Add(_layoutPanel);
 
-            /*AddToForm(_startImage, 0, 0);*/
             var pixels = Utils.LoadPixels(_startImage);
-
-            /*
-            var grayscale = GrayscaleTask.ToGrayscale(pixels);
-            var edges = SobelFilter.Filter(grayscale, new[,] {{-0.5, -1, -0.5}, {0, 0, 0}, {0.5, 1, 0.5}});
-            */
-
-
-            /*
-            AddToForm(Utils.ConvertToBitmap(pixels), 0, 0);
-            var energyMatrix = ImageEffects.SeamCarving.MakeIntensityMatrix(pixels);
-            */
-
-
-            /*
-            var representation = ImageEffects.SeamCarving.GrayScaleEnergyRepresentation(energyMatrix);
-            AddToForm(Utils.ConvertToBitmap(representation), 0, 1);
-            */
 
 
             var resizeFactor = 1;
@@ -78,14 +60,16 @@ namespace SeamCarving
         {
             for (var i = 0; i < 500; i++)
             {
-                var energyMatrix = ImageEffects.SeamCarving.MakeIntensityMatrix(im);
-                var sumMatrix = ImageEffects.SeamCarving.MakeSumMatrix(energyMatrix);
-            //    progress.Report((Utils.ConvertToBitmap(sumMatrix), i));
-                var shrinkPixels = ImageEffects.SeamCarving.FindShrikedPixelsVertically(sumMatrix);
-                var marked = ImageEffects.SeamCarving.MarkSeam(im, shrinkPixels);
+                var energyMap = ImageEffects.SeamCarving.MakeEnergyMap(im);
+                var indexMap = ImageEffects.SeamCarving.MakeVerticalIndexMap(energyMap);
+                var sums = ImageEffects.SeamCarving.CalculateSeams(energyMap, indexMap);
+                var bestSeam = ImageEffects.SeamCarving.GetBestSeam(sums, indexMap);
+                var marked = ImageEffects.SeamCarving.MarkSeam(im, bestSeam);
+
                 progress.Report((Utils.ConvertToBitmap(marked), i));
-                var removed = ImageEffects.SeamCarving.RemoveSeamsVertical(im, shrinkPixels);
-                progress.Report((Utils.ConvertToBitmap(marked), i));
+
+                var removed = ImageEffects.SeamCarving.RemoveSeamsVertical(marked, bestSeam);
+                progress.Report((Utils.ConvertToBitmap(im), i));
 
                 im = removed;
             }
