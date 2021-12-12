@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
@@ -43,36 +44,42 @@ namespace SeamCarving
             _layoutPanel.Controls.Add(pictureBox, 0, 0);
 
             var im = pixels;
-            var progress = new Progress<(Image, int)>(t =>
+            var progress = new Progress<(Image, double)>(t =>
             {
                 pictureBox.Image = t.Item1;
-                Text = $"Step: {t.Item2 + 1} in 500";
+                Text = $"Average iteration time:: {t.Item2}";
             });
 
             KeyDown += (sender, args) =>
             {
                 if (args.KeyCode == Keys.S)
-                    Task.Run(() => DoSeamCarving(progress, im));
+                    Task.Run(() => DoSeamCarving(progress, im))
+                        .ContinueWith(task => Text = $"Average iteration time: {task.Result} ms");
             };
         }
 
-        private void DoSeamCarving(IProgress<(Image, int)> progress, Pixel[,] im)
+        private double DoSeamCarving(IProgress<(Image, double)> progress, Pixel[,] im)
         {
-            for (var i = 0; i < 500; i++)
+            var times = new List<double>();
+            for (var i = 0; i < 100; i++)
             {
+                var stopWatch = new Stopwatch();
+                stopWatch.Restart();
                 var energyMap = ImageEffects.SeamCarving.MakeEnergyMap(im);
                 var indexMap = ImageEffects.SeamCarving.MakeVerticalIndexMap(energyMap);
                 var sums = ImageEffects.SeamCarving.CalculateSeams(energyMap, indexMap);
                 var bestSeam = ImageEffects.SeamCarving.GetBestSeam(sums, indexMap);
                 var marked = ImageEffects.SeamCarving.MarkSeam(im, bestSeam);
 
-                progress.Report((Utils.ConvertToBitmap(marked), i));
+             //   progress.Report((Utils.ConvertToBitmap(marked), i));
 
                 var removed = ImageEffects.SeamCarving.RemoveSeamsVertical(marked, bestSeam);
-                progress.Report((Utils.ConvertToBitmap(im), i));
 
                 im = removed;
+                progress.Report((Utils.ConvertToBitmap(im), stopWatch.ElapsedMilliseconds));
             }
+
+            return times.Average();
         }
 
         private void AddToForm(Bitmap bmp, int row, int column)
