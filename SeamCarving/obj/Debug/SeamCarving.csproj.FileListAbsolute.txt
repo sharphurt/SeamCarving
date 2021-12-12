@@ -16,4 +16,7 @@ C:\Users\sharphurt\RiderProjects\SeamCarving\SeamCarving\bin\Debug\PriorityQueue
 C:\Users\sharphurt\RiderProjects\SeamCarving\SeamCarving\bin\Debug\PriorityQueue.xml
 C:\Users\sharphurt\RiderProjects\SeamCarving\SeamCarving\bin\Debug\RapidPriorityQueue.dll
 C:\Users\sharphurt\RiderProjects\SeamCarving\SeamCarving\bin\Debug\Assets\img1.jpg
-C:\Users\sharphurt\RiderProjects\SeamCarving\SeamCarving\bin\Debug\Assets\img2.png
+C:\Users\sharphurt\RiderProjects\SeamCarving\SeamCarving\bin\Debug\Assets\shs.jpg
+C:\Users\sharphurt\RiderProjects\SeamCarving\SeamCarving\bin\Debug\Assets\rickroll.jfif
+C:\Users\sharphurt\RiderProjects\SeamCarving\SeamCarving\bin\Debug\Assets\vladek.jpg
+C:\Users\sharphurt\RiderProjects\SeamCarving\SeamCarving\bin\Debug\Assets\hui.jpg

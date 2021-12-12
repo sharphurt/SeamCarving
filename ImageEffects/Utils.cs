@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using System.Linq;
 
 namespace ImageEffects
 {
@@ -23,14 +24,17 @@ namespace ImageEffects
         public static Bitmap ConvertToBitmap(Pixel[,] array)
         {
             return ConvertToBitmap(array.GetLength(0), array.GetLength(1),
-                (x, y) => array[x, y].Marked ? Color.Crimson : array[x, y].Color);
+                (x, y) => array[x, y].Marked ? Color.White : array[x, y].Color);
         }
 
         public static Bitmap ConvertToBitmap(double[,] array)
         {
+            var min = array.Cast<double>().Min();
+            var max = array.Cast<double>().Max();
+
             return ConvertToBitmap(array.GetLength(0), array.GetLength(1), (x, y) =>
             {
-                var gray = (int) (255 * array[x, y]);
+                var gray = (int) array[x, y];
                 gray = Math.Min(gray, 255);
                 gray = Math.Max(gray, 0);
                 return Color.FromArgb(gray, gray, gray);
