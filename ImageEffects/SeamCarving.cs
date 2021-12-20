@@ -51,7 +51,7 @@ namespace ImageEffects
 
             var result = new double[width, height];
 
-            var tasks = Enumerable.Range(0, height - 1)
+            var tasks = Enumerable.Range(0, height)
                 .Select(y => Task.Factory.StartNew(() =>
                 {
                     var res = new double[width];

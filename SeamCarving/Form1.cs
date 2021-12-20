@@ -76,18 +76,18 @@ namespace SeamCarving
         {
             for (var i = 0; i < 100; i++)
             {
-                /*var energyMatrix = ImageEffects.SeamCarving.MakeIntensityMatrix(im);
+                var energyMatrix = ImageEffects.SeamCarving.MakeIntensityMatrix(im);
                 var marked = ImageEffects.SeamCarving.MarkSeamVertical(im, energyMatrix);
                 progress.Report((Utils.ConvertToBitmap(marked), i));
                 var removed = ImageEffects.SeamCarving.RemoveSeamsVertical(marked);
                 progress.Report((Utils.ConvertToBitmap(removed), i));
                 
-                im = removed;*/
+                im = removed;
 
-                var energyMatrix = ImageEffects.SeamCarving.MakeIntensityMatrix(im);
-                var marked = ImageEffects.SeamCarving.MarkSeamHorizontally(im, energyMatrix);
+                energyMatrix = ImageEffects.SeamCarving.MakeIntensityMatrix(im);
+                marked = ImageEffects.SeamCarving.MarkSeamHorizontally(im, energyMatrix);
                 progress.Report((Utils.ConvertToBitmap(marked), i));
-                var removed = ImageEffects.SeamCarving.RemoveSeamsHorizontally(marked);
+                removed = ImageEffects.SeamCarving.RemoveSeamsHorizontally(marked);
                 progress.Report((Utils.ConvertToBitmap(removed), i));
                 im = removed;
             }
